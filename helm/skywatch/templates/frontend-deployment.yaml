@@ -54,7 +54,10 @@ spec:
 
           env:
             - name: BACKEND_URL
-              value: {{ printf "http://%s:%v" (include "skywatch.backend.fullname" .) .Values.backend.service.port | quote }}
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "skywatch.frontend.fullname" . }}-config
+                  key: BACKEND_URL
 
           {{- if .Values.frontend.livenessProbe.enabled }}
           livenessProbe:
