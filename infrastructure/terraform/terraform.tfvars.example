@@ -1,0 +1,4 @@
+# Copy this file to terraform.tfvars and replace the example path.
+# terraform.tfvars is intentionally excluded from Git.
+
+kubeconfig_path = "C:/Users/YOUR_USERNAME/.kube/skywatch/config"

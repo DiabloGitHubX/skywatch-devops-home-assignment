@@ -3,7 +3,6 @@
 from unittest.mock import patch
 
 import pytest
-
 from skywatch_backend import create_app
 from skywatch_backend.weather import (
     CityNotFoundError,

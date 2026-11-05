@@ -4,7 +4,6 @@ from unittest.mock import Mock, patch
 
 import pytest
 import requests
-
 from skywatch_frontend import create_app
 
 

@@ -1,0 +1,12 @@
+# Target the Python version used by our application images.
+target-version = "py312"
+
+# Keep linting focused on application code and tests.
+include = ["*.py", "*.pyi"]
+
+[lint]
+# E4/E7/E9: Python syntax and common coding errors
+# F: Pyflakes (unused imports, undefined names, etc.)
+# I: Import ordering
+# B: Common bug-prone patterns
+select = ["E4", "E7", "E9", "F", "I", "B"]

@@ -1,0 +1,115 @@
+# SkyWatch Helm chart defaults.
+# Image tags are supplied by CI/GitOps using a 7-character commit SHA.
+# Do not use "latest" or deploy placeholder image tags.
+
+nameOverride: ""
+fullnameOverride: ""
+
+backend:
+  replicaCount: 1
+
+  image:
+    repository: ghcr.io/diablogithubx/skywatch-backend
+    tag: ""
+    pullPolicy: IfNotPresent
+
+  containerPort: 5001
+
+  service:
+    type: ClusterIP
+    port: 5001
+
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      cpu: 250m
+      memory: 256Mi
+
+  livenessProbe:
+    enabled: true
+    path: /healthz
+    initialDelaySeconds: 10
+    periodSeconds: 10
+    timeoutSeconds: 2
+    failureThreshold: 3
+
+  readinessProbe:
+    enabled: true
+    path: /readyz
+    initialDelaySeconds: 5
+    periodSeconds: 5
+    timeoutSeconds: 2
+    failureThreshold: 3
+
+frontend:
+  replicaCount: 1
+
+  image:
+    repository: ghcr.io/diablogithubx/skywatch-frontend
+    tag: ""
+    pullPolicy: IfNotPresent
+
+  containerPort: 5000
+
+  service:
+    type: ClusterIP
+    port: 5000
+
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      cpu: 250m
+      memory: 256Mi
+
+  livenessProbe:
+    enabled: true
+    path: /healthz
+    initialDelaySeconds: 10
+    periodSeconds: 10
+    timeoutSeconds: 2
+    failureThreshold: 3
+
+  readinessProbe:
+    enabled: true
+    path: /healthz
+    initialDelaySeconds: 5
+    periodSeconds: 5
+    timeoutSeconds: 2
+    failureThreshold: 3
+
+# Applied to both application containers.
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 10001
+  runAsGroup: 10001
+  seccompProfile:
+    type: RuntimeDefault
+
+securityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  capabilities:
+    drop:
+      - ALL
+
+# Optional ingress; disabled by default for the local K3s lab.
+ingress:
+  enabled: false
+  className: traefik
+  annotations: {}
+  host: skywatch.local
+  path: /
+  pathType: Prefix
+  tls: []
+
+# Optional image pull secrets for private registries.
+imagePullSecrets: []
+
+# Optional scheduling configuration.
+nodeSelector: {}
+tolerations: []
+affinity: {}

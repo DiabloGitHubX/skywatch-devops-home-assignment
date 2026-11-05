@@ -1,0 +1,6 @@
+apiVersion: v2
+name: skywatch
+description: Helm chart for the SkyWatch frontend and backend application
+type: application
+version: 0.1.0
+appVersion: "0.1.0"

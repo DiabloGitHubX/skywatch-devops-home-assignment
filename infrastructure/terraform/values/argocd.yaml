@@ -1,0 +1,59 @@
+# Argo CD Helm values for the SkyWatch K3s development cluster.
+# Terraform manages Argo CD; Argo CD manages the SkyWatch application.
+
+global:
+  logging:
+    level: warn
+
+server:
+  replicas: 1
+  service:
+    type: ClusterIP
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      cpu: 300m
+      memory: 384Mi
+
+controller:
+  replicas: 1
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 768Mi
+
+repoServer:
+  replicas: 1
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      cpu: 300m
+      memory: 384Mi
+
+redis:
+  resources:
+    requests:
+      cpu: 25m
+      memory: 64Mi
+    limits:
+      cpu: 150m
+      memory: 192Mi
+
+redis-ha:
+  enabled: false
+
+applicationSet:
+  replicas: 0
+
+notifications:
+  enabled: false
+
+dex:
+  enabled: false
