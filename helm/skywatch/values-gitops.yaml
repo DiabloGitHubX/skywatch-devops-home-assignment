@@ -1,14 +1,10 @@
 # Managed by GitHub Actions after successful image publishing.
 # Do not manually set image tags to unpublished versions.
-#
-# Empty tags are intentional during initial setup.
-# Argo CD will only be activated after CI publishes real images
-# and updates this file with their commit SHA tags.
 
 backend:
   image:
-    tag: ""
+    tag: "d6a308c"
 
 frontend:
   image:
-    tag: ""
+    tag: "d6a308c"
