@@ -190,9 +190,9 @@ The backend queries Open-Meteo's geocoding and forecast APIs. It returns HTTP `4
 
 ## CI/CD and GitOps
 
-The workflow in `.github/workflows/ci.yaml` runs on pushes and pull requests targeting `main`:
+The workflow in `.github/workflows/ci.yaml` runs on pushes and pull requests targeting `main` when relevant application, Helm, infrastructure, or CI files change. It also validates Terraform configuration and Ansible playbook syntax on an Ubuntu GitHub Actions runner. Infrastructure-only changes do not trigger Docker image builds or publishing.
 
-1. **Validate:** Python 3.12, Ruff linting, pytest, strict Helm lint, and Helm template rendering.
+1. **Validate:** Python 3.12, Ruff linting, pytest, strict Helm lint and template rendering, Terraform formatting and validation, and Ansible playbook syntax checking.
 2. **Build and scan:** Build backend/frontend Linux AMD64 images, scan OS and library dependencies with Trivy, and fail on actionable HIGH/CRITICAL findings (`ignore-unfixed: true`).
 3. **Publish (pushes to `main`):** Publish scanned images to GHCR using the first seven characters of the commit SHA, not `latest`.
 4. **Update GitOps (pushes to `main`):** Commit both new image tags to `helm/skywatch/values-gitops.yaml` with `[skip ci]` to prevent an endless pipeline loop.
@@ -238,6 +238,8 @@ helm template skywatch-dev helm/skywatch \
 ```
 
 The placeholder tags in these last two commands are **only for rendering and validation**, not deployment.
+
+**Verification scope:** The GitHub Actions workflow successfully validates Python tests, linting, Helm chart rendering, Terraform configuration, and Ansible playbook syntax. The screenshots document a previously demonstrated working three-node K3s deployment and GitOps rollout. These checks do not constitute an automated end-to-end rebuild of the entire infrastructure from scratch.
 
 ## Design decisions and trade-offs
 
