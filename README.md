@@ -230,11 +230,11 @@ python -m pip install -r app/backend/requirements.txt \
 ruff check app tests
 python -m pytest -q
 helm lint helm/skywatch --strict \
-  --set backend.image.tag=test123 \
-  --set frontend.image.tag=test123
+  --set backend.image.tag=a3f8c91 \
+  --set frontend.image.tag=a3f8c91
 helm template skywatch-dev helm/skywatch \
-  --set backend.image.tag=test123 \
-  --set frontend.image.tag=test123
+  --set backend.image.tag=a3f8c91 \
+  --set frontend.image.tag=a3f8c91
 ```
 
 The placeholder tags in these last two commands are **only for rendering and validation**, not deployment.

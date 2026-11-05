@@ -12,6 +12,7 @@ on:
       - "pytest.ini"
       - "helm/**"
       - "!helm/skywatch/values-gitops.yaml"
+      - "infrastructure/**"
       - ".github/workflows/ci.yaml"
 
   pull_request:
@@ -25,6 +26,7 @@ on:
       - "pytest.ini"
       - "helm/**"
       - "!helm/skywatch/values-gitops.yaml"
+      - "infrastructure/**"
       - ".github/workflows/ci.yaml"
 
 permissions:
@@ -112,6 +114,54 @@ jobs:
             --set backend.image.tag=a3f8c91 \
             --set frontend.image.tag=a3f8c91 \
             > /tmp/skywatch-rendered.yaml
+
+  validate-infrastructure:
+    name: Validate Terraform and Ansible
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.16.5"
+
+      - name: Initialize Terraform
+        working-directory: infrastructure/terraform
+        run: terraform init -backend=false -lockfile=readonly
+
+      - name: Check Terraform formatting
+        working-directory: infrastructure/terraform
+        run: terraform fmt -check -recursive
+
+      - name: Validate Terraform configuration
+        working-directory: infrastructure/terraform
+        run: terraform validate
+
+      - name: Set up Python for Ansible
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Ansible
+        run: python -m pip install ansible-core==2.16.14
+
+      - name: Check Ansible playbook syntax
+        working-directory: infrastructure/ansible
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          printf '[k3s_master]\nci-master ansible_connection=local\n[k3s_workers]\nci-worker ansible_connection=local\n' \
+            > /tmp/skywatch-ci-inventory.ini
+
+          ansible-playbook \
+            -i /tmp/skywatch-ci-inventory.ini \
+            --syntax-check \
+            playbook.yml
 
   build-and-scan:
     name: Build and Scan (${{ matrix.component }})
