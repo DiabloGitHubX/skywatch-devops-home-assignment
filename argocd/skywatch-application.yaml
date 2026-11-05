@@ -1,0 +1,28 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: skywatch
+  namespace: argocd
+spec:
+  project: default
+
+  source:
+    repoURL: https://github.com/DiabloGitHubX/skywatch-devops-home-assignment.git
+    targetRevision: main
+    path: helm/skywatch
+    helm:
+      releaseName: skywatch
+      valueFiles:
+        - values.yaml
+        - values-gitops.yaml
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: skywatch
+
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
