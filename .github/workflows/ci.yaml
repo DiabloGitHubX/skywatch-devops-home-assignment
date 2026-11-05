@@ -1,22 +1,67 @@
-
 name: SkyWatch CI
 
 on:
   push:
     branches:
       - main
+    paths:
+      - "app/**"
+      - "tests/**"
+      - "requirements-dev.txt"
+      - "ruff.toml"
+      - "pytest.ini"
+      - "helm/**"
+      - "!helm/skywatch/values-gitops.yaml"
+      - ".github/workflows/ci.yaml"
+
   pull_request:
     branches:
       - main
+    paths:
+      - "app/**"
+      - "tests/**"
+      - "requirements-dev.txt"
+      - "ruff.toml"
+      - "pytest.ini"
+      - "helm/**"
+      - "!helm/skywatch/values-gitops.yaml"
+      - ".github/workflows/ci.yaml"
 
 permissions:
   contents: read
+  pull-requests: read
 
 concurrency:
   group: skywatch-ci-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
+  changes:
+    name: Detect Changed Files
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+
+    outputs:
+      application: ${{ steps.filter.outputs.application }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Detect application changes
+        id: filter
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            application:
+              - 'app/**'
+              - 'tests/**'
+              - 'requirements-dev.txt'
+              - 'ruff.toml'
+              - 'pytest.ini'
+
   validate:
     name: Lint, Test and Validate Helm
     runs-on: ubuntu-24.04
@@ -70,7 +115,10 @@ jobs:
 
   build-and-scan:
     name: Build and Scan (${{ matrix.component }})
-    needs: validate
+    needs:
+      - changes
+      - validate
+    if: needs.changes.outputs.application == 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 25
 
@@ -222,7 +270,7 @@ jobs:
 
           TAG="${IMAGE_SHA:0:7}"
 
-          cat > helm/skywatch/values-gitops.yaml <<EOF
+          cat > helm/skywatch/values-gitops.yaml <<EOF2
           # Managed by GitHub Actions after successful image publishing.
           # Do not manually set image tags to unpublished versions.
 
@@ -233,7 +281,7 @@ jobs:
           frontend:
             image:
               tag: "${TAG}"
-          EOF
+          EOF2
 
           cat helm/skywatch/values-gitops.yaml
 
