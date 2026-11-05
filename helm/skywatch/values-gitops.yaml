@@ -3,8 +3,8 @@
 
 backend:
   image:
-    tag: "e142b39"
+    tag: "d058a57"
 
 frontend:
   image:
-    tag: "e142b39"
+    tag: "d058a57"
