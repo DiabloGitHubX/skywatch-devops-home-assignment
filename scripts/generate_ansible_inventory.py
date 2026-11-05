@@ -1,3 +1,4 @@
+
 #!/usr/bin/env python3
 """Generate an Ansible inventory from Multipass VM information."""
 
@@ -23,14 +24,15 @@ def discover_vms(multipass):
     vms = data["list"]
 
     names = [vm["name"] for vm in vms]
+
     if len(names) != len(set(names)):
         raise ValueError("Multipass returned duplicate VM names")
 
     return {vm["name"]: vm for vm in vms}
 
 
-def get_ipv4(vms, name):
-    """Return the single usable IPv4 address of a running VM."""
+def get_ipv4(vms, name, multipass):
+    """Return the VM's default-route IPv4 source address."""
     vm = vms.get(name)
 
     if vm is None:
@@ -39,10 +41,43 @@ def get_ipv4(vms, name):
     if vm.get("state") != "Running":
         raise ValueError(f"VM is not running: {name}")
 
-    addresses = []
+    result = subprocess.run(
+        [
+            multipass,
+            "exec",
+            name,
+            "--",
+            "ip",
+            "-4",
+            "route",
+            "show",
+            "default",
+        ],
+        capture_output=True,
+        text=True,
+        check=True,
+    )
 
-    for value in vm.get("ipv4", []):
-        address = ipaddress.ip_address(value)
+    addresses = set()
+
+    for line in result.stdout.splitlines():
+        fields = line.split()
+
+        if not fields or fields[0] != "default":
+            continue
+
+        if "src" not in fields:
+            continue
+
+        source_index = fields.index("src") + 1
+
+        if source_index >= len(fields):
+            continue
+
+        try:
+            address = ipaddress.ip_address(fields[source_index])
+        except ValueError:
+            continue
 
         if (
             isinstance(address, ipaddress.IPv4Address)
@@ -50,16 +85,23 @@ def get_ipv4(vms, name):
             and not address.is_link_local
             and not address.is_unspecified
         ):
-            addresses.append(str(address))
-
-    addresses = sorted(set(addresses))
+            addresses.add(str(address))
 
     if len(addresses) != 1:
         raise ValueError(
-            f"Expected exactly one usable IPv4 address for {name}; found {addresses}"
+            f"Expected exactly one default-route IPv4 source for {name}; "
+            f"found {sorted(addresses)}"
         )
 
-    return addresses[0]
+    address = addresses.pop()
+
+    if address not in vm.get("ipv4", []):
+        raise ValueError(
+            f"Default-route address {address} for {name} "
+            "is not reported by Multipass"
+        )
+
+    return address
 
 
 def generate_inventory(
@@ -76,9 +118,15 @@ def generate_inventory(
     ]
 
     if controller_mode == "master":
-        lines.append(f"{master_name} ansible_connection=local k3s_node_ip={master_ip}")
+        lines.append(
+            f"{master_name} ansible_connection=local "
+            f"k3s_node_ip={master_ip}"
+        )
     else:
-        lines.append(f"{master_name} ansible_host={master_ip} k3s_node_ip={master_ip}")
+        lines.append(
+            f"{master_name} ansible_host={master_ip} "
+            f"k3s_node_ip={master_ip}"
+        )
 
     lines.extend(
         [
@@ -87,7 +135,10 @@ def generate_inventory(
         ]
     )
 
-    lines.extend(f"{name} ansible_host={address}" for name, address in workers)
+    lines.extend(
+        f"{name} ansible_host={address}"
+        for name, address in workers
+    )
 
     lines.extend(
         [
@@ -159,7 +210,9 @@ def main():
     parser.add_argument(
         "--output",
         type=Path,
-        default=Path("infrastructure/ansible/inventory/hosts.generated.ini"),
+        default=Path(
+            "infrastructure/ansible/inventory/hosts.ini"
+        ),
         help="Destination inventory file",
     )
 
@@ -176,9 +229,19 @@ def main():
     try:
         vms = discover_vms(args.multipass)
 
-        master_ip = get_ipv4(vms, args.master)
+        master_ip = get_ipv4(
+            vms,
+            args.master,
+            args.multipass,
+        )
 
-        workers = [(name, get_ipv4(vms, name)) for name in args.workers]
+        workers = [
+            (
+                name,
+                get_ipv4(vms, name, args.multipass),
+            )
+            for name in args.workers
+        ]
 
         content = generate_inventory(
             master_name=args.master,
