@@ -25,6 +25,10 @@ override.tf.json
 # Ansible
 *.retry
 
+# Local and generated inventory.
+**/inventory/hosts.ini
+**/inventory/hosts.generated.ini
+
 # Kubernetes
 kubeconfig
 kubeconfig.*

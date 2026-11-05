@@ -1,0 +1,20 @@
+---
+- name: Validate Ansible controller
+  hosts: localhost
+  connection: local
+  gather_facts: true
+  become: false
+  any_errors_fatal: true
+
+  tasks:
+    - name: Verify controller is the designated K3s master
+      ansible.builtin.assert:
+        that:
+          - ansible_facts['hostname'] == (expected_controller_hostname | default(groups['k3s_master'][0]))
+        fail_msg: >-
+          Ansible is running on the wrong controller.
+          Expected {{ expected_controller_hostname | default(groups['k3s_master'][0]) }},
+          but detected {{ ansible_facts['hostname'] }}.
+          Run this playbook inside the designated master VM.
+        success_msg: >-
+          Controller verified: {{ ansible_facts['hostname'] }}.

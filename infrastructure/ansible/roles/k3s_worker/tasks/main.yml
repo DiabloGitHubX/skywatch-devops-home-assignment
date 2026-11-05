@@ -1,0 +1,87 @@
+---
+- name: Validate K3s worker configuration
+  ansible.builtin.assert:
+    that:
+      - groups['k3s_master'] | length == 1
+      - hostvars[groups['k3s_master'][0]].k3s_node_ip is defined
+      - k3s_version is defined
+      - k3s_binary_path is defined
+      - k3s_install_script is defined
+    fail_msg: >-
+      Required K3s worker configuration is missing.
+      Verify the generated inventory and shared group variables.
+
+- name: Check K3s agent service definition
+  ansible.builtin.stat:
+    path: /etc/systemd/system/k3s-agent.service
+  register: k3s_agent_service
+
+- name: Check K3s binary
+  ansible.builtin.stat:
+    path: "{{ k3s_binary_path }}"
+  register: k3s_agent_binary
+
+- name: Reject incomplete K3s agent installation
+  ansible.builtin.assert:
+    that:
+      - k3s_agent_service.stat.exists == k3s_agent_binary.stat.exists
+    fail_msg: >-
+      Incomplete K3s agent installation detected.
+      The service and binary must either both exist or both be absent.
+      Manual investigation is required.
+
+- name: Check installed K3s agent version
+  ansible.builtin.command: "{{ k3s_binary_path }} --version"
+  register: installed_k3s_agent_version
+  changed_when: false
+  check_mode: false
+  when: k3s_agent_service.stat.exists
+
+- name: Verify installed K3s agent version matches pinned version
+  ansible.builtin.assert:
+    that:
+      - k3s_version in installed_k3s_agent_version.stdout
+    fail_msg: >-
+      Installed K3s agent version differs from {{ k3s_version }}.
+      Manual upgrade or reconciliation is required.
+  when: k3s_agent_service.stat.exists
+
+- name: Download K3s installation script
+  ansible.builtin.get_url:
+    url: https://get.k3s.io
+    dest: "{{ k3s_install_script }}"
+    mode: "0755"
+  when: not k3s_agent_service.stat.exists
+
+- name: Install K3s agent
+  ansible.builtin.command: "{{ k3s_install_script }}"
+  environment:
+    INSTALL_K3S_VERSION: "{{ k3s_version }}"
+    K3S_URL: >-
+      https://{{ hostvars[groups['k3s_master'][0]].k3s_node_ip }}:{{ k3s_api_port }}
+    K3S_TOKEN: "{{ hostvars[groups['k3s_master'][0]].k3s_join_token }}"
+    INSTALL_K3S_EXEC: "agent"
+  no_log: true
+  when: not k3s_agent_service.stat.exists and not ansible_check_mode
+
+- name: Ensure K3s agent service is enabled and running
+  ansible.builtin.systemd:
+    name: k3s-agent
+    enabled: true
+    state: started
+  when: not ansible_check_mode or k3s_agent_service.stat.exists
+
+- name: Wait for K3s agent service to become active
+  ansible.builtin.command: systemctl is-active k3s-agent
+  register: k3s_agent_status
+  changed_when: false
+  check_mode: false
+  retries: 10
+  delay: 6
+  until: k3s_agent_status.stdout == "active"
+  when: not ansible_check_mode or k3s_agent_service.stat.exists
+
+- name: Display K3s agent service status
+  ansible.builtin.debug:
+    var: k3s_agent_status.stdout
+  when: not ansible_check_mode or k3s_agent_service.stat.exists
