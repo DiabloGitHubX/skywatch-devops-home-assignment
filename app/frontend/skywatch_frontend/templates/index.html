@@ -1,0 +1,132 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SkyWatch | Weather</title>
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: #f3f6fa;
+            font-family: Arial, sans-serif;
+            color: #1f2937;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 440px;
+            margin: 20px;
+            padding: 32px;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+            text-align: center;
+        }
+
+        h1 {
+            margin-top: 0;
+            color: #2563eb;
+        }
+
+        .subtitle {
+            color: #6b7280;
+            margin-bottom: 24px;
+        }
+
+        form {
+            display: flex;
+            gap: 8px;
+        }
+
+        input {
+            flex: 1;
+            min-width: 0;
+            padding: 12px;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            font-size: 16px;
+        }
+
+        button {
+            padding: 12px 18px;
+            border: none;
+            border-radius: 6px;
+            background: #2563eb;
+            color: white;
+            font-size: 16px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background: #1d4ed8;
+        }
+
+        .result {
+            margin-top: 24px;
+            padding: 20px;
+            background: #eff6ff;
+            border-radius: 8px;
+        }
+
+        .temperature {
+            font-size: 36px;
+            font-weight: bold;
+            margin: 12px 0;
+        }
+
+        .error {
+            margin-top: 20px;
+            padding: 12px;
+            background: #fef2f2;
+            color: #b91c1c;
+            border-radius: 6px;
+        }
+    </style>
+</head>
+
+<body>
+    <main class="container">
+        <h1>SkyWatch</h1>
+        <p class="subtitle">Simple weather, anywhere.</p>
+
+        <form method="GET" action="/">
+            <input
+                type="text"
+                name="city"
+                placeholder="Enter a city"
+                value="{{ city }}"
+                maxlength="100"
+                required
+                aria-label="City"
+            >
+            <button type="submit">Search</button>
+        </form>
+
+        {% if weather %}
+        <section class="result">
+            <h2>{{ weather.city }}, {{ weather.country }}</h2>
+            <div class="temperature">
+                {{ weather.temperature }}{{ weather.temperature_unit }}
+            </div>
+            <p>{{ weather.condition }}</p>
+        </section>
+        {% endif %}
+
+        {% if error %}
+        <div class="error" role="alert">
+            {{ error }}
+        </div>
+        {% endif %}
+    </main>
+</body>
+</html>
