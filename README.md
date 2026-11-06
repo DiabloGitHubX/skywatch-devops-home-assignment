@@ -1,5 +1,7 @@
 # SkyWatch — DevOps Home Assignment
 
+**Chosen implementation path:** Local, multi-node Kubernetes deployment using **Multipass and K3s**, with Ansible-based cluster configuration, Terraform-managed platform components, and Argo CD GitOps application delivery.
+
 A locally hosted weather-search application deployed on a three-node K3s cluster using **Multipass, Ansible, Terraform, Helm, GitHub Actions, GHCR, and Argo CD**. The deployment is GitOps-driven: application changes are validated, packaged as commit-tagged container images, and reconciled into Kubernetes without a manual Helm upgrade or application `kubectl apply` on each release.
 
 ## Demo and evidence
@@ -252,6 +254,20 @@ The placeholder tags in these last two commands are **only for rendering and val
 - **Container hardening:** Non-root UID/GID `10001`, dropped Linux capabilities, no privilege escalation, read-only root filesystem, default seccomp profile, CPU/memory requests and limits, and health probes.
 - **Local access:** `ClusterIP` and port-forwarding avoid introducing an ingress controller or public exposure for a small assignment environment.
 - **Pinned legacy K3s:** Improves repeatability of the tested lab, but requires upgrading to a supported Kubernetes release before any production use.
+
+## Challenges encountered and solutions
+
+The following engineering challenges influenced the implementation. The solutions are reflected in the repository's automation and configuration.
+
+| Challenge | Solution | Why it matters |
+| --- | --- | --- |
+| **Multipass VM IP addresses can change** between restarts, making a static Ansible inventory unreliable. | `scripts/generate_ansible_inventory.py` discovers the current VM addresses; `bootstrap_cluster.py` regenerates the inventory before running Ansible. | Reduces dependence on hardcoded local network configuration. |
+| **Repeated bootstrap runs could accidentally replace working VMs or duplicate SSH configuration.** | The bootstrap checks existing VM specifications, reuses matching VMs, avoids duplicating authorized keys, and verifies SSH host keys rather than silently replacing them. | Makes repeat runs safer and easier to troubleshoot. |
+| **Terraform and Ansible validation in CI requires tooling that isn't present by default on the runner.** | The infrastructure validation job explicitly installs Terraform and Ansible, initializes Terraform without its backend, runs formatting and configuration validation, and syntax-checks the Ansible playbook using a temporary CI inventory. | Catches configuration errors without requiring the live Multipass cluster inside GitHub Actions. |
+| **A pipeline that commits image tags back into Git could trigger itself repeatedly.** | GitHub Actions writes image tags to `values-gitops.yaml`, excludes that generated file from workflow path triggers, and includes `[skip ci]` in the bot commit. | Prevents unnecessary or recursive CI runs while retaining Git as the deployment source of truth. |
+| **Application images must be available before Argo CD attempts to deploy their tags.** | The workflow validates, builds, scans, and publishes the images before committing the new image tags into Git. | Keeps the desired deployment configuration aligned with published artifacts. |
+
+These are implementation challenges and the safeguards used to address them. The automated CI checks validate configuration and code, but do not replace a full infrastructure rebuild test.
 
 ## Troubleshooting
 
